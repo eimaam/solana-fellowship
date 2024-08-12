@@ -1,172 +1,88 @@
-// Import necessary modules
 import React, { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import {
-  clusterApiUrl,
-  Connection,
-  Keypair,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-} from '@solana/web3.js';
+import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js';
+import { transferTokens } from '../utils/utils'; 
 import { showToast } from 'react-next-toast';
-import { WalletModal } from '@solana/wallet-adapter-react-ui';
-import { transferTokens } from '../utils/utils';
+import { Card, Input, Button, Space, Typography } from 'antd';
+import { useToken } from './context/TokenContext';
 
-// React component for transferring tokens
+const { Title } = Typography;
+
 const TransferToken: React.FC = () => {
-  const { publicKey, connected } = useWallet();
-  const [mintAddress, setMintAddress] = useState<string>('');
-  const [fromTokenAccountAddress, setFromTokenAccountAddress] =
-    useState<string>('');
-  const [toTokenAccountAddress, setToTokenAccountAddress] =
-    useState<string>('');
+  const { publicKey, connected, signTransaction } = useWallet();
+  const { tokenMintAddress } = useToken(); 
   const [amount, setAmount] = useState<number>(0);
-  const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
+  const [recipientAddress, setRecipientAddress] = useState<string>('');
 
-  const handleTransfer = async () => {
+  const handleTransferTokens = async () => {
     if (!connected) {
-      setShowWalletModal(true);
-      showToast.error('Please connect your wallet to transfer tokens.');
+      showToast.error('🚨 *Oops!* Connect your wallet to transfer tokens. 🌐');
       return;
     }
-    if (!publicKey) return showToast.error('Wallet not connected');
+    if (!publicKey || !signTransaction) {
+      showToast.error('🚨 *Connection Error!* Ensure your wallet is connected and able to sign transactions. 🛠️');
+      return;
+    }
+    if (!tokenMintAddress) {
+      showToast.error('🚨 *Missing Token Address!* Please create a token first. 🏷️');
+      return;
+    }
+    if (!amount || amount <= 0) {
+      showToast.error('🚨 *Invalid Amount!* Enter a value greater than 0. 💸');
+      return;
+    }
+    if (!recipientAddress) {
+      showToast.error('🚨 *Recipient Address Required!* Please provide a valid address. 📬');
+      return;
+    }
 
     const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
     try {
-      const keypair = await Keypair.generate();
-      const payer = keypair;
-
-      // airdrop some SOL to the payer
-      const airdropSignature = await connection.requestAirdrop(
-        payer.publicKey,
-        1 * LAMPORTS_PER_SOL,
-      );
-      const latestBlockhash = await connection.getLatestBlockhash();
-
-      // Wait for airdrop confirmation
-      await connection.confirmTransaction({
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-        signature: airdropSignature,
-      });
-
-      console.log(
-        `💰 Airdropped ${amount} SOL to ${new PublicKey(payer).toBase58()}`,
-      );
-      // Convert addresses from string to PublicKey
-      const mintPubkey = new PublicKey(mintAddress);
-      const fromTokenAccountPubkey = new PublicKey(fromTokenAccountAddress);
-      const toTokenAccountPubkey = new PublicKey(toTokenAccountAddress);
-
-      // Perform token transfer
-      const signature = await transferTokens(
+      await transferTokens(
         connection,
-        payer,
-        mintPubkey,
-        fromTokenAccountPubkey,
-        toTokenAccountPubkey,
+        new PublicKey(tokenMintAddress),
         amount,
+        signTransaction,
+        publicKey,
+        new PublicKey(recipientAddress)
       );
-
-      showToast.success(
-        `Token transfer successful! Tx signature: ${signature}`,
-      );
+      showToast.success('🎉 *Success!* Tokens have been transferred successfully. 🎊');
     } catch (error) {
-      console.error('Error during token transfer:', error);
-      showToast.error('Error during token transfer.');
+      console.error('Error transferring tokens:', error);
+      showToast.error('⚠️ *Error!* Something went wrong during the transfer. Please try again. 😔');
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 p-6">
-      <div className="w-full max-w-md p-8 bg-gray-800 rounded-xl shadow-lg ring-1 ring-gray-700">
-        <h2 className="text-3xl font-bold text-white mb-6">Transfer Token</h2>
-        <div className="mb-6">
-          <label
-            htmlFor="mintAddress"
-            className="block text-sm font-medium text-gray-300 mb-2"
-          >
-            Mint Address
-          </label>
-          <input
-            id="mintAddress"
-            type="text"
-            value={mintAddress}
-            onChange={(e) => setMintAddress(e.target.value)}
-            placeholder="Enter mint address"
-            className="w-full p-3 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-        </div>
-        <div className="mb-6">
-          <label
-            htmlFor="fromTokenAccount"
-            className="block text-sm font-medium text-gray-300 mb-2"
-          >
-            From Token Account Address
-          </label>
-          <input
-            id="fromTokenAccount"
-            type="text"
-            value={fromTokenAccountAddress}
-            onChange={(e) => setFromTokenAccountAddress(e.target.value)}
-            placeholder="Enter from token account address"
-            className="w-full p-3 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-        </div>
-        <div className="mb-6">
-          <label
-            htmlFor="toTokenAccount"
-            className="block text-sm font-medium text-gray-300 mb-2"
-          >
-            To Token Account Address
-          </label>
-          <input
-            id="toTokenAccount"
-            type="text"
-            value={toTokenAccountAddress}
-            onChange={(e) => setToTokenAccountAddress(e.target.value)}
-            placeholder="Enter to token account address"
-            className="w-full p-3 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-        </div>
-        <div className="mb-6">
-          <label
-            htmlFor="amount"
-            className="block text-sm font-medium text-gray-300 mb-2"
-          >
-            Amount
-          </label>
-          <input
-            id="amount"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            placeholder="Enter amount to transfer"
-            className="w-full p-3 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-        </div>
-        <button
-          onClick={handleTransfer}
-          className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-md shadow-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+    <Card className="w-full max-w-xs md:max-w-lg shadow-lg p-6">
+      <Title level={2} className="text-3xl font-bold mb-6">Transfer Token</Title>
+      <Space direction="vertical" className="w-full">
+        <Input
+          id="amount"
+          type="number"
+          placeholder="Enter amount to transfer"
+          value={amount}
+          onChange={(e:React.ChangeEvent<HTMLInputElement>) => setAmount(Number(e.target.value))}
+          className="mb-4"
+        />
+        <Input
+          id="recipientAddress"
+          placeholder="Enter recipient address"
+          value={recipientAddress}
+          onChange={(e:React.ChangeEvent<HTMLInputElement>) => setRecipientAddress(e.target.value)}
+          className="mb-4"
+        />
+        <Button
+          onClick={handleTransferTokens}
+          type="primary"
+          size="large"
+          className="w-full"
         >
-          Transfer Token
-        </button>
-      </div>
-      <div className="mt-6">
-        {!connected && (
-          <button
-            onClick={() => setShowWalletModal(true)}
-            className="py-2 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-md shadow-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            Connect Wallet
-          </button>
-        )}
-      </div>
-      {showWalletModal && (
-        <WalletModal onClose={() => setShowWalletModal(false)} />
-      )}
-    </div>
+          Transfer Tokens
+        </Button>
+      </Space>
+    </Card>
   );
 };
 
