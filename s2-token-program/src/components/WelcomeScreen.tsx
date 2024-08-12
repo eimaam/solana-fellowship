@@ -9,11 +9,12 @@ const WelcomeScreen = () => {
   const { setVisible } = useWalletModal();
 
   const handleConnectWallet = async () => {
+
     if (publicKey) {
-      disconnect();
-    } else {
+      return disconnect();
+    } 
       setVisible(true);
-    }
+    
   };
 
   return (

@@ -1,19 +1,20 @@
-import { FC, ReactNode } from 'react';
+import { FC, ReactNode, useMemo } from 'react';
 import {
   ConnectionProvider,
   WalletProvider,
 } from '@solana/wallet-adapter-react';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import {
-  PhantomWalletAdapter,
-  SolflareWalletAdapter,
-} from '@solana/wallet-adapter-wallets';
+  WalletModal,
+  WalletModalProvider,
+} from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
+import '@solana/wallet-adapter-react-ui/styles.css';
 
-// Configure the wallets you want to support
-const wallets = [new PhantomWalletAdapter(), new SolflareWalletAdapter()];
 
 const WalletProviderComponent: FC<{ children: ReactNode }> = ({ children }) => {
+
+  const wallets = useMemo(() => [], []);
+
   return (
     <ConnectionProvider endpoint={clusterApiUrl('devnet')}>
       <WalletProvider wallets={wallets} autoConnect>
