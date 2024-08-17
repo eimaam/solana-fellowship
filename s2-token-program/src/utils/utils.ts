@@ -55,7 +55,6 @@ export const mintTokens = async (
       mintAddress,
       recipientAddress
     );
-
     // Create a transaction to mint tokens
     const transaction = new Transaction().add(
       createMintToInstruction(
@@ -74,10 +73,10 @@ export const mintTokens = async (
     const signedTransaction = await signTransaction(transaction);
     const serializedTransaction = signedTransaction.serialize();
 
-    const signature = await connection.sendRawTransaction(serializedTransaction, { skipPreflight: false });
+    const signature = await connection.sendRawTransaction(serializedTransaction, { skipPreflight: true });
 
     // Confirm the transaction
-    await connection.confirmTransaction({
+    const confirmation = await connection.confirmTransaction({
       blockhash: recentBlockhash.blockhash,
       lastValidBlockHeight: recentBlockhash.lastValidBlockHeight,
       signature,
@@ -87,6 +86,18 @@ export const mintTokens = async (
     throw error;
   }
 };
+
+export async function getTokenAccount(mintAddress: string, owner: PublicKey, ) {
+  try {
+    
+    return await getAssociatedTokenAddress(
+      new PublicKey(mintAddress),
+      owner,
+    );
+  } catch (error) {
+    throw new Error('Error fetching token account');
+  }
+}
 
 
 // transfer tokens
@@ -221,6 +232,36 @@ export const burnTokens = async (
     throw error;
   }
 };
+
+
+export const airdropTokens = async (
+  connection: Connection,
+  amount: number,
+  walletPublicKey: PublicKey
+) => {
+  try {
+    // Request airdrop of SOL (in lamports)
+    const airdropSignature = await connection.requestAirdrop(
+      walletPublicKey,
+      amount * 10 ** 9 // Convert SOL to lamports (1 SOL = 10^9 lamports)
+    );
+
+    // Fetch the recent blockhash and last valid block height
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+
+    // Confirm the transaction
+    await connection.confirmTransaction({
+      blockhash,
+      lastValidBlockHeight,
+      signature: airdropSignature,
+    }, 'confirmed');
+
+  } catch (error) {
+    console.error('Error during airdrop:', error);
+    throw error;
+  }
+};
+
 
 
 
