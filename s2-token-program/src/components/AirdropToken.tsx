@@ -15,7 +15,7 @@ const AirdropToken: React.FC = () => {
   const [useCustomAddress, setUseCustomAddress] = useState<boolean>(false);
   const [customAddress, setCustomAddress] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [transactionInfo, setTransactionInfo] = useState<{ address: string; txRef: string | null; amount: number | null }>({ address: '', txRef: null, amount: null });
+  const [transactionInfo, setTransactionInfo] = useState<{ address: string; txRef: string | null | void; amount: number | null }>({ address: '', txRef: null, amount: null });
 
   const handleAirdrop = async () => {
     if (!connected) return showToast.error('🚨 Please connect your wallet to airdrop tokens.');
@@ -60,13 +60,13 @@ const AirdropToken: React.FC = () => {
           type="number"
           placeholder="Enter amount to airdrop"
           value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(Number(e.target.value))}
           className="mb-4"
         />
         <Space direction="horizontal" align="center">
           <Switch
             checked={useCustomAddress}
-            onChange={(checked) => setUseCustomAddress(checked)}
+            onChange={(checked:boolean) => setUseCustomAddress(checked)}
           />
           <span>Use custom address</span>
         </Space>
@@ -75,7 +75,7 @@ const AirdropToken: React.FC = () => {
             id="customAddress"
             placeholder="Enter custom wallet address"
             value={customAddress}
-            onChange={(e) => setCustomAddress(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomAddress(e.target.value)}
             className="mb-4"
           />
         )}
