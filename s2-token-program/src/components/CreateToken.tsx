@@ -20,7 +20,8 @@ const { Title } = Typography;
 const CreateToken: React.FC = () => {
   const { publicKey, signTransaction, connected, connecting } = useWallet();
   const { tokenMintAddress, setTokenMintAddress } = useToken();
-  const [decimals, setDecimals] = useState<number>(0);
+  const [decimals, setDecimals] = useState<number>(9);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleCreateToken = async () => {
     if (!connected) {
@@ -35,6 +36,7 @@ const CreateToken: React.FC = () => {
     const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
     try {
+      setIsLoading(true)
       const mintPublicKey = new PublicKey(publicKey);
       const associatedTokenAddress = await getAssociatedTokenAddress(
         mintPublicKey,
@@ -50,6 +52,8 @@ const CreateToken: React.FC = () => {
         ),
       );
 
+console.log({ associatedTokenAddress })
+console.log({ transaction })
       // Sign the transaction with the connected wallet
       const recentBlockhash = await connection.getLatestBlockhash();
       transaction.recentBlockhash = recentBlockhash.blockhash;
@@ -59,21 +63,27 @@ const CreateToken: React.FC = () => {
 
       // Send the transaction
       const signature = await connection.sendRawTransaction(
-        serializedTransaction,
+        serializedTransaction, { skipPreflight: true },
       );
 
+      console.log({ signature})
+
       // Confirm the transaction
-      await connection.confirmTransaction({
+      const confirm = await connection.confirmTransaction({
         blockhash: recentBlockhash.blockhash,
         lastValidBlockHeight: recentBlockhash.lastValidBlockHeight,
         signature,
       });
+
+      console.log({ confirm})
 
       setTokenMintAddress(associatedTokenAddress.toBase58());
       showToast.success('🎉 *Success!* Your token account has been created. 🎊 Token Address:');
     } catch (error: any) {
       console.error('Error creating token:', error);
       showToast.error(`⚠️ *Error!* Something went wrong while creating your token. Please try again. 😔`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,8 +109,8 @@ const CreateToken: React.FC = () => {
           size="large"
           className="w-full"
           onClick={handleCreateToken}
-          disabled={connecting}
-          loading={connecting}
+          disabled={connecting || isLoading}
+          loading={connecting || isLoading}
         >
           Create Token
         </Button>
